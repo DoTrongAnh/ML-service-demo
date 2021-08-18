@@ -1,7 +1,34 @@
 from django.test import TestCase
+from rest_framework.test import APIClient
 import inspect
 from apps.ml.registry import MLRegistry
 from apps.ml.income_classifier.random_forest import RandomForestClassifier
+
+class EndpointTests(TestCase):
+	def test_predict_view(self):
+		client = APIClient()
+		input_data = {
+		"age":37,
+		"workclass":"Private",
+		"fnlwgt":34146,
+		"education-num":9,
+		"education":"HS-grad",
+		"marital-status":"Married-civ-spouse",
+		"occupation":"Craft-repair",
+		"relationship":"Husband",
+		"race":"White",
+		"sex":"Male",
+		"capital-gain":0,
+		"capital-loss":0,
+		"hours-per-week":68,
+		"native-country":"United-States"
+		}
+		classifier_url = "/api/v1/income_classifier/predict"
+		response = client.post(classifier_url, input_data, format="json")
+		self.assertEqual(200, response.status_code)
+		self.assertEqual("<=50k", response.data["label"])
+		self.assertTrue("request_id" in response.data)
+		self.assertTrue("status" in response.data)
 
 class MLTests(TestCase):
 	def test_registry(self):
