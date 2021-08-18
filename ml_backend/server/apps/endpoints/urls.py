@@ -5,7 +5,7 @@ from apps.endpoints.views import EndpointViewSet, MLAlgorithmViewSet, MLAlgorith
 
 router = DefaultRouter(trailing_slash=False)
 router.register(r"endpoints", EndpointViewSet, basename="endpoints")
-router.register(r"mlalgorithms", EndpointViewSet, basename="mlalgorithms")
-router.register(r"mlalgorithmstatuses", EndpointViewSet, basename="mlalgorithmstatuses")
-router.register(r"mlrequests", EndpointViewSet, basename="mlrequests")
+router.register(r"mlalgorithms", MLAlgorithmViewSet, basename="mlalgorithms")
+router.register(r"mlalgorithmstatuses", MLAlgorithmStatusViewSet, basename="mlalgorithmstatuses")
+router.register(r"mlrequests", MLRequestViewSet, basename="mlrequests")
 urlpatterns = [url(r"^api/v1/", include(router.urls))]
