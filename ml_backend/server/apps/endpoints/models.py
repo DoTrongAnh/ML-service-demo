@@ -29,3 +29,12 @@ class MLRequest(models.Model):
 	feedback = models.CharField(max_length=10000, blank=True, null=True)
 	created_at = models.DateTimeField(auto_now_add=True, blank=True)
 	parent_mlalgorithm = models.ForeignKey(MLAlgorithm, on_delete=models.CASCADE)
+
+class ABTest(models.Model):
+	title = models.CharField(max_length=10000)
+	created_by = models.CharField(max_length=128)
+	created_at = models.DateTimeField(auto_now_add=True, blank=True)
+	ended_at = models.DateTimeField(blank=True, null=True)
+	summary = models.CharField(max_length=10000)
+	parent_mlalgorithm1 = models.ForeignKey(MLAlgorithm, on_delete=models.CASCADE, related_name="parent_mlalgorithm1")
+	parent_mlalgorithm2 = models.ForeignKey(MLAlgorithm, on_delete=models.CASCADE, related_name="parent_mlalgorithm2")
