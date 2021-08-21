@@ -7,6 +7,7 @@ from django.db.models import F
 from apps.endpoints.models import Endpoint, MLAlgorithm, MLAlgorithmStatus, MLRequest, ABTest
 from apps.endpoints.serializers import EndpointSerializer, MLAlgorithmSerializer, MLAlgorithmStatusSerializer, MLRequestSerializer, ABTestSerializer
 import json
+import math
 import datetime
 from numpy.random import rand
 
@@ -80,6 +81,10 @@ class ABTestViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.G
 	def perform_create(self, serializer):
 		try:
 			with transaction.atomic():
+				instance_type = registry.endpoints[instance.parent_mlalgorithm1].model_type
+				if instance_type != registry.endpoints[instance.parent_mlalgorithm2].model_type:
+					raise Exception("Two algorithms are of different types!")
+				instance.model_type = instance_type
 				instance = serializer.save()
 				status_1 = MLAlgorithmStatus(status="ab_testing",
 					created_by=instance.created_by,
@@ -100,33 +105,45 @@ class StopABTestView(views.APIView):
 	def post(self, request, ab_id, format=None):
 		try:
 			ab_test = ABTest.objects.get(pk=ab_id)
+			model_type = ab_test.model_type
 			if ab_test.ended_at is not None:
 				return Response({"message":"A/B testing is already completed."})
 			date_now = datetime.datetime.now()
-			all_res_1 = MLRequest.objects.filter(
+			all_res_1_list = MLRequest.objects.filter(
 				parent_mlalgorithm=ab_test.parent_mlalgorithm1,
 				created_at__gt=ab_test.created_at,
-				created_at__lt=date_now).count()
-			correct_res_1 = MLRequest.objects.filter(
-				parent_mlalgorithm=ab_test.parent_mlalgorithm1,
-				created_at__gt=ab_test.created_at,
-				created_at__lt=date_now,
-				response=F('feedback')).count()
-			acc_1 = correct_res_1/float(all_res_1)
-			print(all_res_1, correct_res_1, acc_1)
-			all_res_2 = MLRequest.objects.filter(
+				created_at__lt=date_now)
+			
+			all_res_2_list = MLRequest.objects.filter(
 				parent_mlalgorithm=ab_test.parent_mlalgorithm2,
 				created_at__gt=ab_test.created_at,
-				created_at__lt=date_now).count()
-			correct_res_2 = MLRequest.objects.filter(
-				parent_mlalgorithm=ab_test.parent_mlalgorithm2,
-				created_at__gt=ab_test.created_at,
-				created_at__lt=date_now,
-				response=F('feedback')).count()
-			acc_2 = correct_res_2/float(all_res_2)
-			print(all_res_2, correct_res_2, acc_2)
+				created_at__lt=date_now)
+			all_res_1 = all_res_1_list.count()
+			all_res_2 = all_res_2_list.count()
 			alg_id_1, alg_id_2 = ab_test.parent_mlalgorithm1, ab_test.parent_mlalgorithm2
-			if acc_1 < acc_2: alg_id_1, ald_id_2 = alg_id_2, alg_id_1
+			if model_type == "classifier":
+				correct_res_1 = MLRequest.objects.filter(
+				parent_mlalgorithm=ab_test.parent_mlalgorithm1,
+				created_at__gt=ab_test.created_at,
+				created_at__lt=date_now,
+				response=F('feedback')).count()
+				correct_res_2 = MLRequest.objects.filter(
+				parent_mlalgorithm=ab_test.parent_mlalgorithm2,
+				created_at__gt=ab_test.created_at,
+				created_at__lt=date_now,
+				response=F('feedback')).count()
+				acc_1 = correct_res_1/float(all_res_1)
+				acc_2 = correct_res_2/float(all_res_2)
+				if acc_1 < acc_2: alg_id_1, ald_id_2 = alg_id_2, alg_id_1
+				summary = f"Algorithm #1 accuracy: {acc_1}, Algorithm #2 accuracy: {acc_2}"
+			else:
+				rmse_1 = sum([(float(res.response) - float(res.feedback))**2 for res in all_res_1_list])
+				rmse_2 = sum([(float(res.response) - float(res.feedback))**2 for res in all_res_2_list])
+				rmse_1 = math.sqrt(rmse_1/float(all_res_1))
+				rmse_2 = math.sqrt(rmse_2/float(all_res_2))
+				if rmse_2 < rmse_1: alg_id_1, ald_id_2 = alg_id_2, alg_id_1
+				summary = f"Algorithm #1 RMSE: {rmse_1}, Algorithm #2 RMSE: {rmse_2}"
+
 			status_1 = MLAlgorithmStatus(status="production",
 					created_by=ab_test.created_by,
 					parent_mlalgorithm=alg_id_1,
@@ -139,7 +156,7 @@ class StopABTestView(views.APIView):
 					active=True)
 			status_2.save()
 			deactivate_other_statuses(status_2)
-			summary = f"Algorithm #1 accuracy: {acc_1}, Algorithm #2 accuracy: {acc_2}"
+			
 			ab_test.ended_at = date_now
 			ab_test.summary = summary
 			ab_test.save()

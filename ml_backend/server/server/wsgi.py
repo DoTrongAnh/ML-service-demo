@@ -27,6 +27,7 @@ try:
 	registry.add_algorithm(
 		algorithm_object=rf,
 		algorithm_name="random forest",
+		algorithm_type="classifier",
 		endpoint_name="income_classifier",
 		algorithm_status="production",
 		algorithm_version="0.0.1",
@@ -36,6 +37,7 @@ try:
 	registry.add_algorithm(
 		algorithm_object=et,
 		algorithm_name="extra trees",
+		algorithm_type="classifier",
 		endpoint_name="income_classifier",
 		algorithm_status="production",
 		algorithm_version="0.0.1",

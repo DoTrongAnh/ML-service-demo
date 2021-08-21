@@ -8,6 +8,7 @@ class Endpoint(models.Model):
 
 class MLAlgorithm(models.Model):
 	name = models.CharField(max_length=128)
+	model_type = models.CharField(max_length=128)
 	description = models.CharField(max_length=1000)
 	code = models.CharField(max_length=50000)
 	version = models.CharField(max_length=128)
@@ -32,6 +33,7 @@ class MLRequest(models.Model):
 
 class ABTest(models.Model):
 	title = models.CharField(max_length=10000)
+	model_type = models.Charfield(max_length=128)
 	created_by = models.CharField(max_length=128)
 	created_at = models.DateTimeField(auto_now_add=True, blank=True)
 	ended_at = models.DateTimeField(blank=True, null=True)
