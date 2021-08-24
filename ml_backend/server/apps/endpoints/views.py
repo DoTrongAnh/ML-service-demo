@@ -1,5 +1,6 @@
 from  rest_framework import viewsets, mixins, views, status
 from rest_framework.response import Response
+from rest_framework.exceptions import APIException
 from apps.ml.registry import MLRegistry
 from server.wsgi import registry
 from django.db import transaction
@@ -48,7 +49,7 @@ class PredictView(views.APIView):
 		algorithm_status = self.request.query_params.get("status","production")
 		algorithm_version = self.request.query_params.get("version")
 		algs = MLAlgorithm.objects.filter(parent_endpoint__name=endpoint_name,
-			status__status=algorithm_status, status__active=True)
+			status__status=algorithm_status, status__active=True, model_type__isnull=False)
 		if algorithm_version is not None: algs = algs.filter(version=algorithm_version)
 		if len(algs) == 0: return Response(
 			{"status":"Error","message":"ML algorithm not available"},
@@ -81,10 +82,10 @@ class ABTestViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.G
 	def perform_create(self, serializer):
 		try:
 			with transaction.atomic():
-				instance_type = registry.endpoints[instance.parent_mlalgorithm1].model_type
-				if instance_type != registry.endpoints[instance.parent_mlalgorithm2].model_type:
+				instance_type = MLAlgorithm.objects.get(pk=serializer.validated_data['parent_mlalgorithm1'].id).model_type
+				if instance_type != MLAlgorithm.objects.get(pk=serializer.validated_data['parent_mlalgorithm2'].id).model_type:
 					raise Exception("Two algorithms are of different types!")
-				instance.model_type = instance_type
+				serializer.validated_data['model_type'] = instance_type
 				instance = serializer.save()
 				status_1 = MLAlgorithmStatus(status="ab_testing",
 					created_by=instance.created_by,
@@ -121,6 +122,7 @@ class StopABTestView(views.APIView):
 			all_res_1 = all_res_1_list.count()
 			all_res_2 = all_res_2_list.count()
 			alg_id_1, alg_id_2 = ab_test.parent_mlalgorithm1, ab_test.parent_mlalgorithm2
+			print(alg_id_1, alg_id_2)
 			if model_type == "classifier":
 				correct_res_1 = MLRequest.objects.filter(
 				parent_mlalgorithm=ab_test.parent_mlalgorithm1,
@@ -134,16 +136,23 @@ class StopABTestView(views.APIView):
 				response=F('feedback')).count()
 				acc_1 = correct_res_1/float(all_res_1)
 				acc_2 = correct_res_2/float(all_res_2)
-				if acc_1 < acc_2: alg_id_1, ald_id_2 = alg_id_2, alg_id_1
+				if acc_1 < acc_2:
+					temp = alg_id_1
+					alg_id_1 = alg_id_2
+					alg_id_2 = temp
 				summary = f"Algorithm #1 accuracy: {acc_1}, Algorithm #2 accuracy: {acc_2}"
 			else:
-				rmse_1 = sum([(float(res.response) - float(res.feedback))**2 for res in all_res_1_list])
-				rmse_2 = sum([(float(res.response) - float(res.feedback))**2 for res in all_res_2_list])
+				rmse_1 = sum([(float(res.response) - float(res.feedback))**2 for res in all_res_1_list if res.response != "error"])
+				rmse_2 = sum([(float(res.response) - float(res.feedback))**2 for res in all_res_2_list if res.response != "error"])
 				rmse_1 = math.sqrt(rmse_1/float(all_res_1))
 				rmse_2 = math.sqrt(rmse_2/float(all_res_2))
-				if rmse_2 < rmse_1: alg_id_1, ald_id_2 = alg_id_2, alg_id_1
+				if rmse_2 < rmse_1: 
+					temp = alg_id_1
+					alg_id_1 = alg_id_2
+					alg_id_2 = temp
 				summary = f"Algorithm #1 RMSE: {rmse_1}, Algorithm #2 RMSE: {rmse_2}"
 
+			print(alg_id_1, alg_id_2)
 			status_1 = MLAlgorithmStatus(status="production",
 					created_by=ab_test.created_by,
 					parent_mlalgorithm=alg_id_1,

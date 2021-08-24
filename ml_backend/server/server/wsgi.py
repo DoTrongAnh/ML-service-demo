@@ -39,7 +39,7 @@ try:
 		algorithm_name="extra trees",
 		algorithm_type="classifier",
 		endpoint_name="income_classifier",
-		algorithm_status="production",
+		algorithm_status="testing",
 		algorithm_version="0.0.1",
 		owner="DTA",
 		algorithm_description="Extra Trees with simple pre- and postprocessing",
