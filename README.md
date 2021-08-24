@@ -48,3 +48,5 @@ This is done via WSGI configuration of the back-end, where the algorithms are ad
 ## Future activities
 - Add more use cases (endpoints) and algorithms for those endpoints
 - Develop a simple React.js web application to send prediction requests with user-input data and display prediction results.
+## References
+- Here is the [guide](https://www.deploymachinelearning.com/) this project followed.
