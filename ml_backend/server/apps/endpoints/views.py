@@ -62,6 +62,7 @@ class PredictView(views.APIView):
 			alg_index = 0 if rand() < 0.5 else 1
 
 		algorithm_object = registry.endpoints[algs[alg_index].id]
+		if "label" in request.data: del request.data["label"]
 		prediction = algorithm_object.compute_prediction(request.data)
 
 		label = prediction["label"] if "label" in prediction else "error"
@@ -72,6 +73,7 @@ class PredictView(views.APIView):
 			feedback="",
 			parent_mlalgorithm=algs[alg_index])
 		ml_request.save()
+		print(label)
 		prediction["request_id"] = ml_request.id
 		return Response(prediction)
 
