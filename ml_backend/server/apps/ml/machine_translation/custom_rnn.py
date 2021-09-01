@@ -7,9 +7,10 @@ class CustomRNN:
 		self.processor = joblib.load(path_to_artifacts + "mtprocessor.joblib")
 		self.model = load_model(path_to_artifacts + "en_fr_translator")
 
-	def preprocessing(self, sentence):
+	def preprocessing(self, data):
 		print("Preprocessing...")
-		return self.processor.preprocess(sentence)
+		if "sentence" not in data: data["sentence"] = ""
+		return self.processor.preprocess(data["sentence"])
 
 	def predict(self, data):
 		print("Predicting...")
