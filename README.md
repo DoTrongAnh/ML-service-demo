@@ -48,5 +48,7 @@ This is done via WSGI configuration of the back-end, where the algorithms are ad
 ## Future activities
 - Add more use cases (endpoints) and algorithms for those endpoints
 - Develop a simple React.js web application to send prediction requests with user-input data and display prediction results.
+- **Update (8/30/2021):** Added RNN model for machine translation endpoint.
 ## References
 - Here is the [guide](https://www.deploymachinelearning.com/) this project followed.
+- Dataset and model for machine translation from [this site](https://towardsdatascience.com/neural-machine-translation-with-python-c2f0a34f7dd) for simple model and small vocabulary.
